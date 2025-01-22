@@ -18,8 +18,11 @@ import InfoMobile from './components/InfoMobile';
 import PaymentForm from './components/PaymentForm';
 import Review from './components/Review';
 import SitemarkIcon from './components/SitemarkIcon';
-import AppTheme from '../shared-theme/AppTheme';
-import ColorModeIconDropdown from '../shared-theme/ColorModeIconDropdown';
+import AppTheme from './shared-theme/AppTheme';
+import ColorModeIconDropdown from './shared-theme/ColorModeIconDropdown';
+import { useCart } from './components/CartContext';
+import { useData } from './components/UserContext'
+import { usePayData } from './components/PayContext';
 
 const steps = ['Shipping address', 'Payment details', 'Review your order'];
 function getStepContent(step) {
@@ -35,17 +38,54 @@ function getStepContent(step) {
   }
 }
 export default function Checkout(props) {
+
   const [activeStep, setActiveStep] = React.useState(0);
+  const {cart} = useCart();
+  const {userData} = useData();
+  const {payData}  = usePayData();
+
+  const totalCost = cart.reduce((sum, item) => sum + item.cost, 0).toFixed(2);
+
+  const isStepValid = () => {
+      if(activeStep === 0) {
+
+          const requiredFields = [
+
+              'first-name',
+              'last-name',
+              'address1',
+              'city',
+              'state',
+              'zip',
+              'country',
+          ];
+          return requiredFields.every((field) => userData[field]?.trim());
+      }
+      else if(activeStep === 1) {
+          const requiredFields = [
+              'cardNumber',
+              'expirationDate',
+              'cvv',
+              'cardHolder',
+          ];
+          return requiredFields.every((field) => payData[field]?.trim());
+      }
+      return true;
+  };
+
   const handleNext = () => {
-    setActiveStep(activeStep + 1);
+      if(isStepValid()) {
+          setActiveStep(activeStep + 1);
+      }
   };
   const handleBack = () => {
     setActiveStep(activeStep - 1);
   };
+
   return (
     <AppTheme {...props}>
       <CssBaseline enableColorScheme />
-      <Box sx={{ position: 'fixed', top: '1rem', right: '1rem' }}>
+      <Box sx={{ position: 'fixed', top: '5rem', right: '1rem' }}>
         <ColorModeIconDropdown />
       </Box>
 
@@ -86,7 +126,7 @@ export default function Checkout(props) {
               maxWidth: 500,
             }}
           >
-            <Info totalPrice={activeStep >= 2 ? '$144.97' : '$134.98'} />
+            <Info totalPrice={activeStep >= 2 ? `$${totalCost}` : `$${totalCost}`} />
           </Box>
         </Grid>
         <Grid
@@ -154,7 +194,7 @@ export default function Checkout(props) {
                   {activeStep >= 2 ? '$144.97' : '$134.98'}
                 </Typography>
               </div>
-              <InfoMobile totalPrice={activeStep >= 2 ? '$144.97' : '$134.98'} />
+              <InfoMobile totalPrice={activeStep >= 2 ? `$${totalCost}` : `$${totalCost}`} />
             </CardContent>
           </Card>
           <Box
@@ -248,14 +288,15 @@ export default function Checkout(props) {
                       Previous
                     </Button>
                   )}
-                  <Button
-                    variant="contained"
-                    endIcon={<ChevronRightRoundedIcon />}
-                    onClick={handleNext}
-                    sx={{ width: { xs: '100%', sm: 'fit-content' } }}
-                  >
-                    {activeStep === steps.length - 1 ? 'Place order' : 'Next'}
-                  </Button>
+                    <Button
+                        variant="contained"
+                        endIcon={<ChevronRightRoundedIcon />}
+                        onClick={handleNext}
+                        sx={{ width: { xs: '100%', sm: 'fit-content' } }}
+                        disabled={!isStepValid()} // Disable button if validation fails
+                    >
+                        {activeStep === steps.length - 1 ? 'Place order' : 'Next'}
+                    </Button>
                 </Box>
               </React.Fragment>
             )}
